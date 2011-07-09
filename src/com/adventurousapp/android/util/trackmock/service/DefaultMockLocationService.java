@@ -7,10 +7,8 @@ import com.adventurousapp.android.util.trackmock.R;
 import com.adventurousapp.android.util.trackmock.util.GeoUtilities;
 
 import android.app.Notification;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.location.LocationManager;
@@ -28,7 +26,6 @@ public class DefaultMockLocationService extends Service {
 	private MockTrackProvider mMockTrackProvider;
 	private PositionProvider mUpdateThread = null;
 	private LocationManager mLocationManager;
-	private NotificationManager mNotificationManager;
 	
 	private boolean mIsActive = false;
 
@@ -42,7 +39,6 @@ public class DefaultMockLocationService extends Service {
 		super.onStart( intent, startId );
 		
 		mLocationManager = (LocationManager) this.getSystemService( LOCATION_SERVICE );
-		mNotificationManager = (NotificationManager) getSystemService( Context.NOTIFICATION_SERVICE );
 	}
 	
 	private final MockLocationService.Stub binder = new MockLocationService.Stub() {
@@ -60,8 +56,8 @@ public class DefaultMockLocationService extends Service {
 			} catch( SecurityException e ) {
 				Log.e( TAG, "Ignoring SecurityException during onDestroy()", e);
 			}
-			
-			mNotificationManager.cancel( NOTIFICATION_ID );
+	
+			stopForeground( true );
 			mIsActive = false;
 		}
 		
@@ -75,14 +71,15 @@ public class DefaultMockLocationService extends Service {
 				mLocationManager.setTestProviderEnabled( PROVIDER_ID, true );  // It looks like it calls addTestProvider() for us
 				mUpdateThread = new PositionProvider( mLocationManager );
 				
+				Log.i( TAG, "Starting playback as foreground service" );
+				startForeground( NOTIFICATION_ID, getNotification() );
+				
 				Log.i( TAG, "Starting position sender thread." );
 				mUpdateThread.start();
 			} catch( SecurityException e ) {
 				Log.e( TAG, "ACCESS_MOCK_LOCATION is not enabled.  Shutting down " + getClass().getSimpleName(), e );
 				stopSelf();
 			}
-			
-			mNotificationManager.notify( NOTIFICATION_ID, getNotification() );
 			
 			mIsActive = true;
 		}
